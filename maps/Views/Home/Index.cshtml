@@ -1,0 +1,117 @@
+﻿@model maps.Models.LocationLists
+@{
+    ViewBag.Title = "Home Page";
+}
+
+<div class="row">
+    <div class="col-md-12 padding">
+        @Html.ActionLink("Add Home", "Create", "Locations", new { area = "" }, new { @class = "btn btn-success" })
+        <input type="button" value="Find Route" class="btn btn-primary" onclick="findRoute()" />
+    </div>
+    <div class="col-md-12 map">
+        <div class="col-md-10 map">
+            <div id="maps" style="width:100%; height:500px;"></div>
+        </div>
+        <div class="col-md-2">
+            <h3>List of Home</h3>
+            @foreach (var item in Model.LocationList)
+            {
+                <div class="form-inline">
+                    <input name="checkedHome" type="checkbox" value="@item.Id">
+                    <label>@item.Code</label>
+                </div>
+             }
+        </div>
+    </div>
+    <div class="col-md-12 padding">
+        <h3>Note: </h3>
+        <p>1. Click Add Home to create new home location</p>
+        <p>2. Hover then click Pin Point in map to update selected home locations</p>
+        <p>3. Checklist of home list in right side map then click Find Route to find the best route</p>
+    </div>
+</div>
+
+<style>
+    .padding {
+        margin: 10px 0 10px 0;
+    }
+</style>
+
+@section Scripts {
+    <script type="text/javascript">
+        function loadMapScenario() {
+            var map = new Microsoft.Maps.Map(document.getElementById("maps"), {
+                credentials: "AmpUGM3JjewwecyLgib_AFkt3UwfXeKVHrnJ0-5pgHvNL2tbN-2jeeJmJbhsta4n",
+                mapTypeId: Microsoft.Maps.MapTypeId.road,
+                zoom: 5
+            });
+
+            // Create the infobox for the pushpin
+            var infobox = null;
+
+            //declare addMarker function
+            function addMarker(latitude, longitude, code, address, id)
+            {
+                var marker = new Microsoft.Maps.Pushpin(new Microsoft.Maps.Location(latitude, longitude), { color: "green" });
+
+                infobox = new Microsoft.Maps.Infobox(marker.getLocation(), {
+                    visible: false
+                });
+
+                marker.metadata = {
+                    id: id,
+                    title: code,
+                    description: address
+                };
+
+                Microsoft.Maps.Events.addHandler(marker, "mouseout", hideInfobox);
+                Microsoft.Maps.Events.addHandler(marker, "mouseover", showInfobox);
+                Microsoft.Maps.Events.addHandler(marker, "click", clickInfobox);
+
+                infobox.setMap(map);
+                map.entities.push(marker);
+                marker.setOptions({ enableHoverStyle: true });
+            };
+
+            function showInfobox(e) {
+                if (e.target.metadata) {
+                    infobox.setOptions({
+                        location: e.target.getLocation(),
+                        title: e.target.metadata.title,
+                        description: e.target.metadata.description,
+                        visible: true
+                    });
+                }
+            }
+
+            function hideInfobox(e) {
+                infobox.setOptions({ visible: false });
+            }
+
+            function clickInfobox(e) {
+                window.location.href = "@Url.Action("Edit", "Locations")?id=" + e.target.metadata.id;
+            }
+
+            //add markers to map
+            @if (Model.LocationList != null)
+            {
+                foreach (var item in Model.LocationList)
+                {
+                    @:addMarker(@item.Latitude, @item.Longitude, '@item.Code', '@item.Address', @item.Id);
+                }
+            }
+        }
+
+        function findRoute() {
+            var listSelected = [];
+            $("input[name=checkedHome]:checked").each(function (e) {
+                listSelected.push(this.value);
+            });
+
+            if (listSelected.length > 0)
+                window.location.href = "@Url.Action("FindRoute", "Locations")?ids=" + listSelected.join(",");
+            else
+                alert("Please choose list of home first")
+        }
+    </script>
+}

@@ -1,0 +1,133 @@
+﻿@model maps.Models.Locations
+
+@{
+    ViewBag.Title = "Add Home";
+}
+
+@using (Html.BeginForm())
+{
+    @Html.AntiForgeryToken()
+
+    <div class="form-horizontal">
+        <h4>Home</h4>
+        <hr />
+
+        <div class="col-md-6">
+                @Html.HiddenFor(model => model.Id)
+                @Html.HiddenFor(model => model.Longitude)
+                @Html.HiddenFor(model => model.Latitude)
+
+                @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+                <div class="form-group">
+                    @Html.LabelFor(model => model.Type, htmlAttributes: new { @class = "control-label col-md-2" })
+                    <div class="col-md-10">
+                        @Html.DropDownListFor(model => model.Type,
+                           new SelectList(
+                                new[]
+                                {
+                                    new { Value = 36, Text = "Type 36" },
+                                    new { Value = 45, Text = "Type 45" },
+                                    new { Value = 72, Text = "Type 72" },
+                                },
+                                "Value",
+                                "Text",
+                                Model
+                            ),
+                        new { @class = "form-control" })
+                        @Html.ValidationMessageFor(model => model.Type, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    @Html.LabelFor(model => model.Code, htmlAttributes: new { @class = "control-label col-md-2" })
+                    <div class="col-md-10">
+                        @Html.TextBoxFor(model => model.Code, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(model => model.Code, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    @Html.LabelFor(model => model.Address, htmlAttributes: new { @class = "control-label col-md-2" })
+                    <div class="col-md-10">
+                        @Html.TextAreaFor(model => model.Address, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(model => model.Address, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="col-md-offset-2 col-md-10">
+                        <input type="button" id="viewMap" value="View Map" class="btn btn-default" onclick="getLongLat()" />
+                        <input type="submit" id="submitForm" value="Save" class="btn btn-default" disabled />
+                        @if (Model.Id != 0)
+                        {
+                        <input type="button" id="deleteLocations" value="Delete" class="btn btn-warning" />
+                        }
+                    </div>
+                </div>
+            </div>
+        <div class="col-md-6">
+            <div id="maps" style="width:100%; height:400px;"></div>
+        </div>
+    </div>
+}
+
+<div>
+    @Html.ActionLink("Back", "Index", "Home")
+</div>
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+<script>
+        $("#deleteLocations").on("click", function () {
+            $.ajax({
+                type: "POST",
+                url: "@Url.Action("Delete", "Locations")",
+                data: {
+                    id: "@Model.Id"
+                },
+                success: function () {
+                    window.location.href = "@Url.Action("Index", "Home")";
+                },
+                error: function () {
+                    window.location.href = "@Url.Action("Index", "Home")";
+                }
+            });
+        });
+
+        $("textarea").on("keyup", function () {
+            document.getElementById("viewMap").disabled = false;
+            document.getElementById("submitForm").disabled = true;
+        });
+
+        function getLongLat() {
+            var address = document.getElementsByName("Address"),
+                long = document.getElementsByName("Longitude"),
+                lat = document.getElementsByName("Latitude");
+
+            var map = new Microsoft.Maps.Map(document.getElementById("maps"), {
+                credentials: "AmpUGM3JjewwecyLgib_AFkt3UwfXeKVHrnJ0-5pgHvNL2tbN-2jeeJmJbhsta4n",
+                mapTypeId: Microsoft.Maps.MapTypeId.road,
+                zoom: 5
+            });
+
+            Microsoft.Maps.loadModule("Microsoft.Maps.Search", function () {
+                var searchManager = new Microsoft.Maps.Search.SearchManager(map);
+                var requestOptions = {
+                    bounds: map.getBounds(),
+                    where: address[0].value,
+                    callback: function (answer, userData) {
+                        long[0].value = answer.results[0].location.longitude;
+                        lat[0].value = answer.results[0].location.latitude;
+
+                        map.setView({ bounds: answer.results[0].bestView });
+                        map.entities.push(new Microsoft.Maps.Pushpin(answer.results[0].location));
+
+                        document.getElementById("viewMap").disabled = true;
+                        document.getElementById("submitForm").disabled = false;
+                    }
+                };
+                searchManager.geocode(requestOptions);
+            });
+        }
+</script>
+}
